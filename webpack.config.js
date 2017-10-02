@@ -7,14 +7,14 @@ var bannerPlugin = new webpack.BannerPlugin({
 })
 
 var entry = { 'bundle': path.resolve('example', 'entry.js') }
-var output = {
-  path: path.resolve(__dirname, './example/dist'),
-  filename: '[name].weex.js'
-}
+var outputPath = path.resolve(__dirname, './example/dist')
 
 var nativeConfig = {
   entry: entry,
-  output: output,
+  output: {
+    path: outputPath,
+    filename: '[name].weex.js'
+  },
   module: {
     loaders: [
       {
@@ -33,7 +33,10 @@ var nativeConfig = {
 
 var webConfig = {
   entry: entry,
-  output: output,
+  output: {
+    path: outputPath,
+    filename: '[name].web.js'
+  },
   module: {
     loaders: [
       {
