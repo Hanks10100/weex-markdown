@@ -45,6 +45,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
 
   var cap;
   var inLink = false;
+  var rootType = null;
 
   while (src) {
     // escape
@@ -57,12 +58,13 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = inlineRE.heading.exec(src)) {
       src = src.substring(cap[0].length);
       var level = cap[1].length;
+      rootType = "h" + level;
       var children = [];
-      parseInlineMarkdown(cap[2], theme, children, theme[("h" + level)]);
+      parseInlineMarkdown(cap[2], theme, children, theme[rootType]);
       if (children.length) {
         container.push({
           type: 'span',
-          style: theme[("h" + level)],
+          style: theme[rootType],
           children: children
         });
       }
@@ -71,6 +73,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     // image
     if (cap = inlineRE.image.exec(src)) {
       src = src.substring(cap[0].length);
+      rootType = 'image';
       container.push({
         type: 'image',
         style: Object.assign(parseImageSize(cap[1]), theme.image),
@@ -86,6 +89,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       var children$1 = [];
       parseInlineMarkdown(cap[1], theme, children$1);
       if (children$1.length) {
+        rootType = 'a';
         container.push({
           type: 'a',
           style: theme.a,
@@ -100,6 +104,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (!inLink && (cap = inlineRE.url.exec(src))) {
       src = src.substring(cap[0].length);
       var href = escape(cap[1]);
+      rootType = 'a';
       container.push({
         type: 'a',
         style: theme.a,
@@ -148,11 +153,13 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     // codespan
     if (cap = inlineRE.codespan.exec(src)) {
       src = src.substring(cap[0].length);
+      container.push({ type: 'span', attr: { value: ' ' } }); // margin-left hack
       container.push({
         type: 'span',
         style: Object.assign({}, theme.codespan, textStyle),
         attr: { value: escape(cap[2], true) }
       });
+      container.push({ type: 'span', attr: { value: ' ' } }); // margin-right hack
       continue
     }
 
@@ -171,14 +178,18 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       throw new Error('Infinite loop on byte: ' + src.charCodeAt(0))
     }
   }
+
+  return rootType
 }
 
 function parseMarkdown (text, theme) {
   if ( theme === void 0 ) theme = {};
 
-  var container = [];
-  parseInlineMarkdown(text, theme, container);
-  return container
+  var nodes = [];
+  return {
+    rootType: parseInlineMarkdown(text, theme, nodes),
+    nodes: nodes
+  }
 }
 
 var getTextContent = function (children) { return children.map(
@@ -192,46 +203,74 @@ function splitContent (content) {
   )
 }
 
+var defaultTheme = {
+  a: { color: '#3333FF' },
+  codespan: {
+    fontFamily: 'monospace',
+    fontSize: '32px',
+    backgroundColor: '#E8E8E8',
+    paddingLeft: 2, paddingRight: 2,
+    marginLeft: 2, marginRight: 2,
+    borderRadius: 3
+  },
+  del: { textDecoration: 'line-through' },
+  em: { fontStyle: 'italic' },
+  h1: { fontSize: '74px', textAlign: 'center' },
+  h2: { fontSize: '62px' },
+  h3: { fontSize: '50px' },
+  h4: { fontSize: '38px' },
+  h5: { fontSize: '28px' },
+  h6: { fontSize: '18px' },
+  strong: { fontWeight: 700 },
+  text: { fontSize: '32px' },
+  imageWrapper: { alignSelf: 'center', marginTop: '20px', marginBottom: '20px' },
+  h1Wrapper: { alignSelf: 'center', marginTop: '30px', marginBottom: '30px' },
+  h2Wrapper: { marginTop: '24px', marginBottom: '24px' },
+  h3Wrapper: { marginTop: '18px', marginBottom: '18px' },
+  blockWrapper: { color: '#333', marginTop: '12px', marginBottom: '12px' }
+};
+
 var markdown = {
   name: 'markdown',
   props: {
     content: String,
-    theme: {
-      type: Object,
-      default: function default$1 () {
-        return {
-          a: { color: '#3333FF' },
-          codespan: {
-            fontFamily: 'monospace',
-            backgroundColor: '#E8E8E8',
-            paddingLeft: 5,
-            paddingRight: 5,
-            borderRadius: 3
-          },
-          del: { textDecoration: 'line-through' },
-          em: { fontStyle: 'italic' },
-          h1: { fontSize: '74px', textAlign: 'center' },
-          h2: { fontSize: '62px' },
-          h3: { fontSize: '50px' },
-          h4: { fontSize: '38px' },
-          h5: { fontSize: '28px' },
-          h6: { fontSize: '18px' },
-          strong: { fontWeight: 700 },
-          text: { fontSize: '32px' }
-        }
+    theme: Object,
+  },
+  methods: {
+    getStyles: function getStyles () {
+      var this$1 = this;
+
+      if (!this.theme) {
+        return defaultTheme
       }
+      // merge default styles
+      var styles = {};
+      for (var type in defaultTheme) {
+        styles[type] = Object.assign({}, defaultTheme[type], this$1.theme[type]);
+      }
+      return styles
     }
   },
   render: function render (h) {
-    var this$1 = this;
-
     var content = this.content || getTextContent(this.$slots.default);
+    var styles = this.getStyles();
     return h('div', {}, splitContent(content).map(function (block) {
+      var ref = parseMarkdown(block, styles);
+      var rootType = ref.rootType;
+      var nodes = ref.nodes;
+      var wrapperStyle = styles.blockWrapper;
+      switch (rootType) {
+        case 'image': return h('image', {
+          style: Object.assign({}, styles.imageWrapper, nodes[0].style),
+          attrs: Object.assign({}, nodes[0].attr)
+        })
+        case 'h1': wrapperStyle = styles.h1Wrapper; break
+        case 'h2': wrapperStyle = styles.h2Wrapper; break
+        case 'h3': wrapperStyle = styles.h3Wrapper; break
+      }
       return h('richtext', {
-        style: { marginTop: '12px', marginBottom: '12px' },
-        attrs: {
-          value: parseMarkdown(block, this$1.theme)
-        }
+        style: wrapperStyle,
+        attrs: { value: nodes }
       })
     }))
   }

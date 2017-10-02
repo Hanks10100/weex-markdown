@@ -37,6 +37,7 @@ function escape (text, encode) {
 export function parseInlineMarkdown (src, theme, container = [], textStyle) {
   let cap
   let inLink = false
+  let rootType = null
 
   while (src) {
     // escape
@@ -49,12 +50,13 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     if (cap = inlineRE.heading.exec(src)) {
       src = src.substring(cap[0].length)
       const level = cap[1].length
+      rootType = `h${level}`
       const children = []
-      parseInlineMarkdown(cap[2], theme, children, theme[`h${level}`])
+      parseInlineMarkdown(cap[2], theme, children, theme[rootType])
       if (children.length) {
         container.push({
           type: 'span',
-          style: theme[`h${level}`],
+          style: theme[rootType],
           children
         })
       }
@@ -63,6 +65,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     // image
     if (cap = inlineRE.image.exec(src)) {
       src = src.substring(cap[0].length)
+      rootType = 'image'
       container.push({
         type: 'image',
         style: Object.assign(parseImageSize(cap[1]), theme.image),
@@ -78,6 +81,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       const children = []
       parseInlineMarkdown(cap[1], theme, children)
       if (children.length) {
+        rootType = 'a'
         container.push({
           type: 'a',
           style: theme.a,
@@ -92,6 +96,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     if (!inLink && (cap = inlineRE.url.exec(src))) {
       src = src.substring(cap[0].length)
       const href = escape(cap[1])
+      rootType = 'a'
       container.push({
         type: 'a',
         style: theme.a,
@@ -140,11 +145,13 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     // codespan
     if (cap = inlineRE.codespan.exec(src)) {
       src = src.substring(cap[0].length)
+      container.push({ type: 'span', attr: { value: ' ' } }) // margin-left hack
       container.push({
         type: 'span',
         style: Object.assign({}, theme.codespan, textStyle),
         attr: { value: escape(cap[2], true) }
       })
+      container.push({ type: 'span', attr: { value: ' ' } }) // margin-right hack
       continue
     }
 
@@ -163,10 +170,14 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       throw new Error('Infinite loop on byte: ' + src.charCodeAt(0))
     }
   }
+
+  return rootType
 }
 
 export function parseMarkdown (text, theme = {}) {
-  const container = []
-  parseInlineMarkdown(text, theme, container)
-  return container
+  const nodes = []
+  return {
+    rootType: parseInlineMarkdown(text, theme, nodes),
+    nodes
+  }
 }
