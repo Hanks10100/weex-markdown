@@ -1,5 +1,5 @@
 // Regex
-const inline = {
+const inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   link: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
@@ -19,33 +19,33 @@ function escape (text, encode) {
     .replace(/'/g, '&#39;')
 }
 
-export function parseInlineMarkdown (src, theme, group = [], textStyle) {
+export function parseInlineMarkdown (src, theme, container = [], textStyle) {
   let cap
   let inLink = false
 
   while (src) {
     // escape
-    if (cap = inline.escape.exec(src)) {
+    if (cap = inlineRE.escape.exec(src)) {
       src = src.substring(cap[0].length)
       continue
     }
 
     // link
-    if (cap = inline.link.exec(src)) {
+    if (cap = inlineRE.link.exec(src)) {
       src = src.substring(cap[0].length)
       inLink = true
       const children = []
-      group.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children })
+      container.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children })
       parseInlineMarkdown(cap[1], theme, children)
       inLink = false
       continue
     }
 
     // url
-    if (!inLink && (cap = inline.url.exec(src))) {
+    if (!inLink && (cap = inlineRE.url.exec(src))) {
       src = src.substring(cap[0].length)
       const href = escape(cap[1])
-      group.push({
+      container.push({
         type: 'a',
         style: theme.a,
         attr: { href },
@@ -58,43 +58,51 @@ export function parseInlineMarkdown (src, theme, group = [], textStyle) {
     }
 
     // strong
-    if (cap = inline.strong.exec(src)) {
+    if (cap = inlineRE.strong.exec(src)) {
       src = src.substring(cap[0].length)
       const children = []
-      group.push({ type: 'span', style: theme.strong, children })
+      container.push({ type: 'span', style: theme.strong, children })
       parseInlineMarkdown(cap[2] || cap[1], theme, children)
       continue
     }
 
     // em
-    if (cap = inline.em.exec(src)) {
+    if (cap = inlineRE.em.exec(src)) {
       src = src.substring(cap[0].length)
       const children = []
-      group.push({ type: 'span', style: theme.em, children })
+      container.push({ type: 'span', style: theme.em, children })
       parseInlineMarkdown(cap[2] || cap[1], theme, children)
       continue
     }
 
     // del
-    if (cap = inline.del.exec(src)) {
+    if (cap = inlineRE.del.exec(src)) {
       src = src.substring(cap[0].length)
       const children = []
-      group.push({ type: 'span', style: theme.del, children })
+      container.push({ type: 'span', style: theme.del, children })
       parseInlineMarkdown(cap[1], theme, children, theme.del)
       continue
     }
 
     // codespan
-    if (cap = inline.codespan.exec(src)) {
+    if (cap = inlineRE.codespan.exec(src)) {
       src = src.substring(cap[0].length)
-      group.push({ type: 'span', style: theme.codespan, attr: { value: escape(cap[2], true) } })
+      container.push({
+        type: 'span',
+        style: theme.codespan,
+        attr: { value: escape(cap[2], true) }
+      })
       continue
     }
 
     // text
-    if (cap = inline.text.exec(src)) {
+    if (cap = inlineRE.text.exec(src)) {
       src = src.substring(cap[0].length)
-      group.push({ type: 'span', style: textStyle, attr: { value: escape(cap[0]) } })
+      container.push({
+        type: 'span',
+        style: textStyle,
+        attr: { value: escape(cap[0]) }
+      })
       continue
     }
 
@@ -104,8 +112,8 @@ export function parseInlineMarkdown (src, theme, group = [], textStyle) {
   }
 }
 
-export function parseMarkdown (text, theme) {
-  const group = []
-  parseInlineMarkdown(text, theme, group)
-  return group
+export function parseMarkdown (text, theme = {}) {
+  const container = []
+  parseInlineMarkdown(text, theme, container)
+  return container
 }

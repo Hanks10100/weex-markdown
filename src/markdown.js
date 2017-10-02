@@ -14,10 +14,10 @@ export default {
         a: { color: '#3333FF' },
         codespan: {
           fontFamily: 'monospace',
-          backgroundColor: '#ddd',
-          paddingLeft: 20,
-          paddingRight: 20,
-          borderRadius: 10
+          backgroundColor: '#E8E8E8',
+          paddingLeft: 5,
+          paddingRight: 5,
+          borderRadius: 3
         },
         del: { textDecoration: 'line-through' },
         em: { fontStyle: 'italic' },
@@ -28,7 +28,6 @@ export default {
   render (h) {
     const content = this.content || getTextContent(this.$slots.default)
     return h('richtext', {
-      style: { fontSize: 60, color: '#404040' },
       attrs: {
         value: parseMarkdown(content, this.theme)
       }

@@ -5,7 +5,7 @@
 }(this, (function () { 'use strict';
 
 // Regex
-var inline = {
+var inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   link: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
@@ -25,35 +25,35 @@ function escape (text, encode) {
     .replace(/'/g, '&#39;')
 }
 
-function parseInlineMarkdown (src, theme, group, textStyle) {
-  if ( group === void 0 ) group = [];
+function parseInlineMarkdown (src, theme, container, textStyle) {
+  if ( container === void 0 ) container = [];
 
   var cap;
   var inLink = false;
 
   while (src) {
     // escape
-    if (cap = inline.escape.exec(src)) {
+    if (cap = inlineRE.escape.exec(src)) {
       src = src.substring(cap[0].length);
       continue
     }
 
     // link
-    if (cap = inline.link.exec(src)) {
+    if (cap = inlineRE.link.exec(src)) {
       src = src.substring(cap[0].length);
       inLink = true;
       var children = [];
-      group.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children: children });
+      container.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children: children });
       parseInlineMarkdown(cap[1], theme, children);
       inLink = false;
       continue
     }
 
     // url
-    if (!inLink && (cap = inline.url.exec(src))) {
+    if (!inLink && (cap = inlineRE.url.exec(src))) {
       src = src.substring(cap[0].length);
       var href = escape(cap[1]);
-      group.push({
+      container.push({
         type: 'a',
         style: theme.a,
         attr: { href: href },
@@ -66,43 +66,51 @@ function parseInlineMarkdown (src, theme, group, textStyle) {
     }
 
     // strong
-    if (cap = inline.strong.exec(src)) {
+    if (cap = inlineRE.strong.exec(src)) {
       src = src.substring(cap[0].length);
       var children$1 = [];
-      group.push({ type: 'span', style: theme.strong, children: children$1 });
+      container.push({ type: 'span', style: theme.strong, children: children$1 });
       parseInlineMarkdown(cap[2] || cap[1], theme, children$1);
       continue
     }
 
     // em
-    if (cap = inline.em.exec(src)) {
+    if (cap = inlineRE.em.exec(src)) {
       src = src.substring(cap[0].length);
       var children$2 = [];
-      group.push({ type: 'span', style: theme.em, children: children$2 });
+      container.push({ type: 'span', style: theme.em, children: children$2 });
       parseInlineMarkdown(cap[2] || cap[1], theme, children$2);
       continue
     }
 
     // del
-    if (cap = inline.del.exec(src)) {
+    if (cap = inlineRE.del.exec(src)) {
       src = src.substring(cap[0].length);
       var children$3 = [];
-      group.push({ type: 'span', style: theme.del, children: children$3 });
+      container.push({ type: 'span', style: theme.del, children: children$3 });
       parseInlineMarkdown(cap[1], theme, children$3, theme.del);
       continue
     }
 
     // codespan
-    if (cap = inline.codespan.exec(src)) {
+    if (cap = inlineRE.codespan.exec(src)) {
       src = src.substring(cap[0].length);
-      group.push({ type: 'span', style: theme.codespan, attr: { value: escape(cap[2], true) } });
+      container.push({
+        type: 'span',
+        style: theme.codespan,
+        attr: { value: escape(cap[2], true) }
+      });
       continue
     }
 
     // text
-    if (cap = inline.text.exec(src)) {
+    if (cap = inlineRE.text.exec(src)) {
       src = src.substring(cap[0].length);
-      group.push({ type: 'span', style: textStyle, attr: { value: escape(cap[0]) } });
+      container.push({
+        type: 'span',
+        style: textStyle,
+        attr: { value: escape(cap[0]) }
+      });
       continue
     }
 
@@ -113,9 +121,11 @@ function parseInlineMarkdown (src, theme, group, textStyle) {
 }
 
 function parseMarkdown (text, theme) {
-  var group = [];
-  parseInlineMarkdown(text, theme, group);
-  return group
+  if ( theme === void 0 ) theme = {};
+
+  var container = [];
+  parseInlineMarkdown(text, theme, container);
+  return container
 }
 
 var getTextContent = function (children) { return children.map(
@@ -132,10 +142,10 @@ var markdown = {
         a: { color: '#3333FF' },
         codespan: {
           fontFamily: 'monospace',
-          backgroundColor: '#ddd',
-          paddingLeft: 20,
-          paddingRight: 20,
-          borderRadius: 10
+          backgroundColor: '#E8E8E8',
+          paddingLeft: 5,
+          paddingRight: 5,
+          borderRadius: 3
         },
         del: { textDecoration: 'line-through' },
         em: { fontStyle: 'italic' },
@@ -146,7 +156,6 @@ var markdown = {
   render: function render (h) {
     var content = this.content || getTextContent(this.$slots.default);
     return h('richtext', {
-      style: { fontSize: 60, color: '#404040' },
       attrs: {
         value: parseMarkdown(content, this.theme)
       }
