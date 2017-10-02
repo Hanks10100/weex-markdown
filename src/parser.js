@@ -2,6 +2,7 @@
 const inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
+  blockquote: /^ *>\s+([^\n]+)(\n(?!def)[^\n]+)*\n*/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   image: /^!\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])(\s+\=[x\d]+)?\)/,
   link: /^\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
@@ -27,11 +28,11 @@ function parseImageSize (str) {
 
 function escape (text, encode) {
   return text
-    .replace(!encode ? /&(?!#?\w+;)/g : /&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    // .replace(!encode ? /&(?!#?\w+;)/g : /&/g, '&amp;')
+    // .replace(/</g, '&lt;')
+    // .replace(/>/g, '&gt;')
+    // .replace(/"/g, '&quot;')
+    // .replace(/'/g, '&#39;')
 }
 
 export function parseInlineMarkdown (src, theme, container = [], textStyle) {
@@ -60,6 +61,22 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
           children
         })
       }
+    }
+
+    // blockquote
+    if (cap = inlineRE.blockquote.exec(src)) {
+      src = src.substring(cap[0].length)
+      rootType = 'blockquote'
+      const children = []
+      parseInlineMarkdown(cap[1], theme, children, theme[rootType])
+      if (children.length) {
+        container.push({
+          type: 'span',
+          style: theme.blockquote,
+          children
+        })
+      }
+      continue
     }
 
     // image

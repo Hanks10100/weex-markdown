@@ -29,6 +29,14 @@ const defaultTheme = {
   h4: { fontSize: '38px' },
   h5: { fontSize: '28px' },
   h6: { fontSize: '18px' },
+  blockquote: { color: '#606060' },
+  blockquoteBlock: {
+    backgroundColor: '#F4F4F4',
+    margin: '20px',
+    padding: '15px',
+    borderLeftWidth: '8px',
+    borderLeftColor: '#BBB'
+  },
   strong: { fontWeight: 700 },
   text: { fontSize: '32px' },
   imageBlock: { alignSelf: 'center', marginTop: '20px', marginBottom: '20px' },
@@ -80,6 +88,7 @@ export default {
           style: Object.assign({}, styles.imageBlock, nodes[0].style),
           attrs: nodes[0].attr
         })
+        case 'blockquote': blockStyle = styles.blockquoteBlock; break;
         case 'h1': case 'h2': case 'h3': case 'h4': case 'h5':
         case 'h6': blockStyle = styles[`${rootType}Block`]; break
       }

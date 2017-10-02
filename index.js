@@ -8,6 +8,7 @@
 var inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
+  blockquote: /^ *>\s+([^\n]+)(\n(?!def)[^\n]+)*\n*/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   image: /^!\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])(\s+\=[x\d]+)?\)/,
   link: /^\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
@@ -33,11 +34,11 @@ function parseImageSize (str) {
 
 function escape (text, encode) {
   return text
-    .replace(!encode ? /&(?!#?\w+;)/g : /&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    // .replace(!encode ? /&(?!#?\w+;)/g : /&/g, '&amp;')
+    // .replace(/</g, '&lt;')
+    // .replace(/>/g, '&gt;')
+    // .replace(/"/g, '&quot;')
+    // .replace(/'/g, '&#39;')
 }
 
 function parseInlineMarkdown (src, theme, container, textStyle) {
@@ -70,6 +71,22 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       }
     }
 
+    // blockquote
+    if (cap = inlineRE.blockquote.exec(src)) {
+      src = src.substring(cap[0].length);
+      rootType = 'blockquote';
+      var children$1 = [];
+      parseInlineMarkdown(cap[1], theme, children$1, theme[rootType]);
+      if (children$1.length) {
+        container.push({
+          type: 'span',
+          style: theme.blockquote,
+          children: children$1
+        });
+      }
+      continue
+    }
+
     // image
     if (cap = inlineRE.image.exec(src)) {
       src = src.substring(cap[0].length);
@@ -86,14 +103,14 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = inlineRE.link.exec(src)) {
       src = src.substring(cap[0].length);
       inLink = true;
-      var children$1 = [];
-      parseInlineMarkdown(cap[1], theme, children$1, theme.a);
-      if (children$1.length) {
+      var children$2 = [];
+      parseInlineMarkdown(cap[1], theme, children$2, theme.a);
+      if (children$2.length) {
         rootType = 'a';
         container.push({
           type: 'a',
           style: theme.a,
-          attr: { href: cap[2] }, children: children$1
+          attr: { href: cap[2] }, children: children$2
         });
       }
       inLink = false;
@@ -121,10 +138,10 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     // strong
     if (cap = inlineRE.strong.exec(src)) {
       src = src.substring(cap[0].length);
-      var children$2 = [];
-      parseInlineMarkdown(cap[2] || cap[1], theme, children$2);
-      if (children$2.length) {
-        container.push({ type: 'span', style: theme.strong, children: children$2 });
+      var children$3 = [];
+      parseInlineMarkdown(cap[2] || cap[1], theme, children$3);
+      if (children$3.length) {
+        container.push({ type: 'span', style: theme.strong, children: children$3 });
       }
       continue
     }
@@ -132,10 +149,10 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     // em
     if (cap = inlineRE.em.exec(src)) {
       src = src.substring(cap[0].length);
-      var children$3 = [];
-      parseInlineMarkdown(cap[2] || cap[1], theme, children$3);
-      if (children$3.length) {
-        container.push({ type: 'span', style: theme.em, children: children$3 });
+      var children$4 = [];
+      parseInlineMarkdown(cap[2] || cap[1], theme, children$4);
+      if (children$4.length) {
+        container.push({ type: 'span', style: theme.em, children: children$4 });
       }
       continue
     }
@@ -143,10 +160,10 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     // del
     if (cap = inlineRE.del.exec(src)) {
       src = src.substring(cap[0].length);
-      var children$4 = [];
-      parseInlineMarkdown(cap[1], theme, children$4, theme.del);
-      if (children$4.length) {
-        container.push({ type: 'span', style: theme.del, children: children$4 });
+      var children$5 = [];
+      parseInlineMarkdown(cap[1], theme, children$5, theme.del);
+      if (children$5.length) {
+        container.push({ type: 'span', style: theme.del, children: children$5 });
       }
       continue
     }
@@ -222,6 +239,14 @@ var defaultTheme = {
   h4: { fontSize: '38px' },
   h5: { fontSize: '28px' },
   h6: { fontSize: '18px' },
+  blockquote: { color: '#606060' },
+  blockquoteBlock: {
+    backgroundColor: '#F4F4F4',
+    margin: '20px',
+    padding: '15px',
+    borderLeftWidth: '8px',
+    borderLeftColor: '#BBB'
+  },
   strong: { fontWeight: 700 },
   text: { fontSize: '32px' },
   imageBlock: { alignSelf: 'center', marginTop: '20px', marginBottom: '20px' },
@@ -279,6 +304,7 @@ var markdown = {
           style: Object.assign({}, styles.imageBlock, nodes[0].style),
           attrs: nodes[0].attr
         })
+        case 'blockquote': blockStyle = styles.blockquoteBlock; break;
         case 'h1': case 'h2': case 'h3': case 'h4': case 'h5':
         case 'h6': blockStyle = styles[(rootType + "Block")]; break
       }
