@@ -7,7 +7,7 @@ const getTextContent = children => children.map(
 const spliterRE = /[\n\t]{2,}/
 function splitContent (content) {
   return content.split(spliterRE).map(
-    line => line.replace(/[\s\n\t]+/g, ' ').trim()
+    line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
   )
 }
 
@@ -23,11 +23,11 @@ const defaultTheme = {
   },
   del: { textDecoration: 'line-through' },
   em: { fontStyle: 'italic' },
-  h1: { fontSize: '74px', textAlign: 'center' },
-  h2: { fontSize: '62px' },
-  h3: { fontSize: '50px' },
-  h4: { fontSize: '38px' },
-  h5: { fontSize: '28px' },
+  h1: { fontSize: '52px', textAlign: 'center' },
+  h2: { fontSize: '45px' },
+  h3: { fontSize: '38px' },
+  h4: { fontSize: '30px' },
+  h5: { fontSize: '24px' },
   h6: { fontSize: '18px' },
   blockquote: { color: '#606060' },
   blockquoteBlock: {

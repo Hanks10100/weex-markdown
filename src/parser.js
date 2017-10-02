@@ -68,7 +68,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       src = src.substring(cap[0].length)
       rootType = 'blockquote'
       const children = []
-      parseInlineMarkdown(cap[1], theme, children, theme[rootType])
+      parseInlineMarkdown(cap[1], theme, children, theme.blockquote)
       if (children.length) {
         container.push({
           type: 'span',
@@ -96,7 +96,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       src = src.substring(cap[0].length)
       inLink = true
       const children = []
-      parseInlineMarkdown(cap[1], theme, children, theme.a)
+      parseInlineMarkdown(cap[1], theme, children, Object.assign({}, theme.a, textStyle))
       if (children.length) {
         rootType = 'a'
         container.push({
