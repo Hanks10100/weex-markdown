@@ -45,7 +45,7 @@ export default {
     const content = this.content || getTextContent(this.$slots.default)
     return h('div', {}, splitContent(content).map(block => {
       return h('richtext', {
-        style: { marginTop: '10px', marginBottom: '15px' },
+        style: { marginTop: '12px', marginBottom: '12px' },
         attrs: {
           value: parseMarkdown(block, this.theme)
         }

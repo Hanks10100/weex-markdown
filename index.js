@@ -9,13 +9,27 @@ var inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
-  link: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
+  image: /^!\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])(\s+\=[x\d]+)?\)/,
+  link: /^\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
   strong: /^__([\s\S]+?)__(?!_)|^\*\*([\s\S]+?)\*\*(?!\*)/,
   em: /^\b_((?:[^_]|__)+?)_\b|^\*((?:\*\*|[\s\S])+?)\*(?!\*)/,
   codespan: /^(`+)\s*([\s\S]*?[^`])\s*\1(?!`)/,
   del: /^~~(?=\S)([\s\S]*?\S)~~/,
   text: /^[\s\S]+?(?=[\\<!\[_*`~]|https?:\/\/| {2,}\n|$)/
 };
+
+// const imageSizeRE = /\=(\d+)x(\d+)/i
+var imageSizeRE = /\{(\d+)x(\d+)?\}/i;
+function parseImageSize (str) {
+  var res = imageSizeRE.exec(str);
+  if (!res) {
+    return { width: 0, height: 0 }
+  }
+  return {
+    width: parseInt(res[1], 10),
+    height: parseInt(res[2] || res[1], 10)
+  }
+}
 
 function escape (text, encode) {
   return text
@@ -44,12 +58,25 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       src = src.substring(cap[0].length);
       var level = cap[1].length;
       var children = [];
-      container.push({
-        type: 'span',
-        style: theme[("h" + level)],
-        children: children
-      });
       parseInlineMarkdown(cap[2], theme, children, theme[("h" + level)]);
+      if (children.length) {
+        container.push({
+          type: 'span',
+          style: theme[("h" + level)],
+          children: children
+        });
+      }
+    }
+
+    // image
+    if (cap = inlineRE.image.exec(src)) {
+      src = src.substring(cap[0].length);
+      container.push({
+        type: 'image',
+        style: Object.assign(parseImageSize(cap[1]), theme.image),
+        attr: { resize: "contain", title: cap[1], src: cap[2] }
+      });
+      continue
     }
 
     // link
@@ -57,8 +84,14 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       src = src.substring(cap[0].length);
       inLink = true;
       var children$1 = [];
-      container.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children: children$1 });
       parseInlineMarkdown(cap[1], theme, children$1);
+      if (children$1.length) {
+        container.push({
+          type: 'a',
+          style: theme.a,
+          attr: { href: cap[2] }, children: children$1
+        });
+      }
       inLink = false;
       continue
     }
@@ -83,8 +116,10 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = inlineRE.strong.exec(src)) {
       src = src.substring(cap[0].length);
       var children$2 = [];
-      container.push({ type: 'span', style: theme.strong, children: children$2 });
       parseInlineMarkdown(cap[2] || cap[1], theme, children$2);
+      if (children$2.length) {
+        container.push({ type: 'span', style: theme.strong, children: children$2 });
+      }
       continue
     }
 
@@ -92,8 +127,10 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = inlineRE.em.exec(src)) {
       src = src.substring(cap[0].length);
       var children$3 = [];
-      container.push({ type: 'span', style: theme.em, children: children$3 });
       parseInlineMarkdown(cap[2] || cap[1], theme, children$3);
+      if (children$3.length) {
+        container.push({ type: 'span', style: theme.em, children: children$3 });
+      }
       continue
     }
 
@@ -101,8 +138,10 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = inlineRE.del.exec(src)) {
       src = src.substring(cap[0].length);
       var children$4 = [];
-      container.push({ type: 'span', style: theme.del, children: children$4 });
       parseInlineMarkdown(cap[1], theme, children$4, theme.del);
+      if (children$4.length) {
+        container.push({ type: 'span', style: theme.del, children: children$4 });
+      }
       continue
     }
 
@@ -189,7 +228,7 @@ var markdown = {
     var content = this.content || getTextContent(this.$slots.default);
     return h('div', {}, splitContent(content).map(function (block) {
       return h('richtext', {
-        style: { marginTop: '10px', marginBottom: '15px' },
+        style: { marginTop: '12px', marginBottom: '12px' },
         attrs: {
           value: parseMarkdown(block, this$1.theme)
         }
