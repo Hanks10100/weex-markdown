@@ -20,8 +20,8 @@ function parseImageSize (str) {
     return { width: 0, height: 0 }
   }
   return {
-    width: parseInt(res[1], 10),
-    height: parseInt(res[2] || res[1], 10)
+    width: parseInt(res[1], 10) + 'px',
+    height: parseInt(res[2] || res[1], 10) +  'px'
   }
 }
 
@@ -79,7 +79,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       src = src.substring(cap[0].length)
       inLink = true
       const children = []
-      parseInlineMarkdown(cap[1], theme, children)
+      parseInlineMarkdown(cap[1], theme, children, theme.a)
       if (children.length) {
         rootType = 'a'
         container.push({
@@ -103,6 +103,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
         attr: { href },
         children: [{
           type: 'span',
+          style: Object.assign({}, theme.text, theme.a),
           attr: { value: href }
         }]
       })
