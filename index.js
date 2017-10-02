@@ -5,10 +5,13 @@
 }(this, (function () { 'use strict';
 
 // Regex
-var inlineRE = {
-  escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
+var blockRE = {
   heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   blockquote: /^ *>\s+([^\n]+)(\n(?!def)[^\n]+)*\n*/,
+};
+
+var inlineRE = {
+  escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   image: /^!\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])(\s+\=[x\d]+)?\)/,
   link: /^\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
@@ -43,11 +46,11 @@ function escape (text, encode) {
 
 function parseInlineMarkdown (src, theme, container, textStyle) {
   if ( container === void 0 ) container = [];
+  if ( textStyle === void 0 ) textStyle = {};
 
   var cap;
   var inLink = false;
   var rootType = null;
-
   while (src) {
     // escape
     if (cap = inlineRE.escape.exec(src)) {
@@ -56,7 +59,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     }
 
     // heading
-    if (cap = inlineRE.heading.exec(src)) {
+    if (cap = blockRE.heading.exec(src)) {
       src = src.substring(cap[0].length);
       var level = cap[1].length;
       rootType = "h" + level;
@@ -72,11 +75,11 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     }
 
     // blockquote
-    if (cap = inlineRE.blockquote.exec(src)) {
+    if (cap = blockRE.blockquote.exec(src)) {
       src = src.substring(cap[0].length);
       rootType = 'blockquote';
       var children$1 = [];
-      parseInlineMarkdown(cap[1], theme, children$1, theme[rootType]);
+      parseInlineMarkdown(cap[1], theme, children$1, theme.blockquote);
       if (children$1.length) {
         container.push({
           type: 'span',
@@ -104,7 +107,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       src = src.substring(cap[0].length);
       inLink = true;
       var children$2 = [];
-      parseInlineMarkdown(cap[1], theme, children$2, theme.a);
+      parseInlineMarkdown(cap[1], theme, children$2, Object.assign({}, theme.a, textStyle));
       if (children$2.length) {
         rootType = 'a';
         container.push({
@@ -217,12 +220,13 @@ var getTextContent = function (children) { return children.map(
 var spliterRE = /[\n\t]{2,}/;
 function splitContent (content) {
   return content.split(spliterRE).map(
-    function (line) { return line.replace(/[\s\n\t]+/g, ' ').trim(); }
+    function (line) { return line.trim(/[\n\t]/); }
+    // line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
   )
 }
 
 var defaultTheme = {
-  a: { color: '#3333FF' },
+  a: { color: '#3333FF', textDecoration: 'none' },
   codespan: {
     fontFamily: 'monospace',
     fontSize: '32px',
@@ -233,11 +237,11 @@ var defaultTheme = {
   },
   del: { textDecoration: 'line-through' },
   em: { fontStyle: 'italic' },
-  h1: { fontSize: '74px', textAlign: 'center' },
-  h2: { fontSize: '62px' },
-  h3: { fontSize: '50px' },
-  h4: { fontSize: '38px' },
-  h5: { fontSize: '28px' },
+  h1: { fontSize: '52px', textAlign: 'center' },
+  h2: { fontSize: '45px' },
+  h3: { fontSize: '38px' },
+  h4: { fontSize: '30px' },
+  h5: { fontSize: '24px' },
   h6: { fontSize: '18px' },
   blockquote: { color: '#606060' },
   blockquoteBlock: {

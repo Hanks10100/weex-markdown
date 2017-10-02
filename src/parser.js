@@ -1,8 +1,11 @@
 // Regex
-const inlineRE = {
-  escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
+const blockRE = {
   heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   blockquote: /^ *>\s+([^\n]+)(\n(?!def)[^\n]+)*\n*/,
+}
+
+const inlineRE = {
+  escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   image: /^!\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])(\s+\=[x\d]+)?\)/,
   link: /^\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
@@ -35,10 +38,11 @@ function escape (text, encode) {
     // .replace(/'/g, '&#39;')
 }
 
-export function parseInlineMarkdown (src, theme, container = [], textStyle) {
+export function parseInlineMarkdown (src, theme, container = [], textStyle = {}) {
   let cap
   let inLink = false
   let rootType = null
+  let listLevel = 0
 
   while (src) {
     // escape
@@ -48,7 +52,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     }
 
     // heading
-    if (cap = inlineRE.heading.exec(src)) {
+    if (cap = blockRE.heading.exec(src)) {
       src = src.substring(cap[0].length)
       const level = cap[1].length
       rootType = `h${level}`
@@ -64,7 +68,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     }
 
     // blockquote
-    if (cap = inlineRE.blockquote.exec(src)) {
+    if (cap = blockRE.blockquote.exec(src)) {
       src = src.substring(cap[0].length)
       rootType = 'blockquote'
       const children = []

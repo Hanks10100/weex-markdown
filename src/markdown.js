@@ -7,12 +7,13 @@ const getTextContent = children => children.map(
 const spliterRE = /[\n\t]{2,}/
 function splitContent (content) {
   return content.split(spliterRE).map(
-    line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
+    line => line.trim(/[\n\t]/)
+    // line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
   )
 }
 
 const defaultTheme = {
-  a: { color: '#3333FF' },
+  a: { color: '#3333FF', textDecoration: 'none' },
   codespan: {
     fontFamily: 'monospace',
     fontSize: '32px',
