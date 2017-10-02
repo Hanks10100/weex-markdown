@@ -7,6 +7,7 @@
 // Regex
 var inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
+  heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   link: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
   strong: /^__([\s\S]+?)__(?!_)|^\*\*([\s\S]+?)\*\*(?!\*)/,
@@ -38,13 +39,26 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       continue
     }
 
+    // heading
+    if (cap = inlineRE.heading.exec(src)) {
+      src = src.substring(cap[0].length);
+      var level = cap[1].length;
+      var children = [];
+      container.push({
+        type: 'span',
+        style: theme[("h" + level)],
+        children: children
+      });
+      parseInlineMarkdown(cap[2], theme, children, theme[("h" + level)]);
+    }
+
     // link
     if (cap = inlineRE.link.exec(src)) {
       src = src.substring(cap[0].length);
       inLink = true;
-      var children = [];
-      container.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children: children });
-      parseInlineMarkdown(cap[1], theme, children);
+      var children$1 = [];
+      container.push({ type: 'a', style: theme.a, attr: { href: cap[2] }, children: children$1 });
+      parseInlineMarkdown(cap[1], theme, children$1);
       inLink = false;
       continue
     }
@@ -68,27 +82,27 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     // strong
     if (cap = inlineRE.strong.exec(src)) {
       src = src.substring(cap[0].length);
-      var children$1 = [];
-      container.push({ type: 'span', style: theme.strong, children: children$1 });
-      parseInlineMarkdown(cap[2] || cap[1], theme, children$1);
+      var children$2 = [];
+      container.push({ type: 'span', style: theme.strong, children: children$2 });
+      parseInlineMarkdown(cap[2] || cap[1], theme, children$2);
       continue
     }
 
     // em
     if (cap = inlineRE.em.exec(src)) {
       src = src.substring(cap[0].length);
-      var children$2 = [];
-      container.push({ type: 'span', style: theme.em, children: children$2 });
-      parseInlineMarkdown(cap[2] || cap[1], theme, children$2);
+      var children$3 = [];
+      container.push({ type: 'span', style: theme.em, children: children$3 });
+      parseInlineMarkdown(cap[2] || cap[1], theme, children$3);
       continue
     }
 
     // del
     if (cap = inlineRE.del.exec(src)) {
       src = src.substring(cap[0].length);
-      var children$3 = [];
-      container.push({ type: 'span', style: theme.del, children: children$3 });
-      parseInlineMarkdown(cap[1], theme, children$3, theme.del);
+      var children$4 = [];
+      container.push({ type: 'span', style: theme.del, children: children$4 });
+      parseInlineMarkdown(cap[1], theme, children$4, theme.del);
       continue
     }
 
@@ -97,7 +111,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       src = src.substring(cap[0].length);
       container.push({
         type: 'span',
-        style: theme.codespan,
+        style: Object.assign({}, theme.codespan, textStyle),
         attr: { value: escape(cap[2], true) }
       });
       continue
@@ -108,7 +122,7 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
       src = src.substring(cap[0].length);
       container.push({
         type: 'span',
-        style: textStyle,
+        style: Object.assign({}, theme.text, textStyle),
         attr: { value: escape(cap[0]) }
       });
       continue
@@ -132,34 +146,55 @@ var getTextContent = function (children) { return children.map(
   function (node) { return node.children ? getTextContent(node.children) : node.text; }
 ).join(''); };
 
+var spliterRE = /[\n\t]{2,}/;
+function splitContent (content) {
+  return content.split(spliterRE).map(
+    function (line) { return line.replace(/[\s\n\t]+/g, ' ').trim(); }
+  )
+}
+
 var markdown = {
   name: 'markdown',
   props: {
     content: String,
     theme: {
       type: Object,
-      default: {
-        a: { color: '#3333FF' },
-        codespan: {
-          fontFamily: 'monospace',
-          backgroundColor: '#E8E8E8',
-          paddingLeft: 5,
-          paddingRight: 5,
-          borderRadius: 3
-        },
-        del: { textDecoration: 'line-through' },
-        em: { fontStyle: 'italic' },
-        strong: { fontWeight: 700 }
+      default: function default$1 () {
+        return {
+          a: { color: '#3333FF' },
+          codespan: {
+            fontFamily: 'monospace',
+            backgroundColor: '#E8E8E8',
+            paddingLeft: 5,
+            paddingRight: 5,
+            borderRadius: 3
+          },
+          del: { textDecoration: 'line-through' },
+          em: { fontStyle: 'italic' },
+          h1: { fontSize: '74px', textAlign: 'center' },
+          h2: { fontSize: '62px' },
+          h3: { fontSize: '50px' },
+          h4: { fontSize: '38px' },
+          h5: { fontSize: '28px' },
+          h6: { fontSize: '18px' },
+          strong: { fontWeight: 700 },
+          text: { fontSize: '32px' }
+        }
       }
     }
   },
   render: function render (h) {
+    var this$1 = this;
+
     var content = this.content || getTextContent(this.$slots.default);
-    return h('richtext', {
-      attrs: {
-        value: parseMarkdown(content, this.theme)
-      }
-    })
+    return h('div', {}, splitContent(content).map(function (block) {
+      return h('richtext', {
+        style: { marginTop: '10px', marginBottom: '15px' },
+        attrs: {
+          value: parseMarkdown(block, this$1.theme)
+        }
+      })
+    }))
   }
 };
 

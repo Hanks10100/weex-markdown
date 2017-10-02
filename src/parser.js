@@ -1,6 +1,7 @@
 // Regex
 const inlineRE = {
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
+  heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   url: /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/,
   link: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]\((https?:\/\/[^\s<]+[^<.,:;"')\]\s])\)/,
   strong: /^__([\s\S]+?)__(?!_)|^\*\*([\s\S]+?)\*\*(?!\*)/,
@@ -28,6 +29,19 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
     if (cap = inlineRE.escape.exec(src)) {
       src = src.substring(cap[0].length)
       continue
+    }
+
+    // heading
+    if (cap = inlineRE.heading.exec(src)) {
+      src = src.substring(cap[0].length)
+      const level = cap[1].length
+      const children = []
+      container.push({
+        type: 'span',
+        style: theme[`h${level}`],
+        children
+      })
+      parseInlineMarkdown(cap[2], theme, children, theme[`h${level}`])
     }
 
     // link
@@ -89,7 +103,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       src = src.substring(cap[0].length)
       container.push({
         type: 'span',
-        style: theme.codespan,
+        style: Object.assign({}, theme.codespan, textStyle),
         attr: { value: escape(cap[2], true) }
       })
       continue
@@ -100,7 +114,7 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle) {
       src = src.substring(cap[0].length)
       container.push({
         type: 'span',
-        style: textStyle,
+        style: Object.assign({}, theme.text, textStyle),
         attr: { value: escape(cap[0]) }
       })
       continue
