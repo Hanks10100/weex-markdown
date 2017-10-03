@@ -6,7 +6,7 @@
 
 // Regex
 var blockRE = {
-  heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
+  heading: /^\n*(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   blockquote: /^ *>\s+([^\n]+)(\n(?!def)[^\n]+)*\n*/,
 };
 
@@ -27,11 +27,13 @@ var imageSizeRE = /\{(\d+)x(\d+)?\}/i;
 function parseImageSize (str) {
   var res = imageSizeRE.exec(str);
   if (!res) {
-    return { width: 0, height: 0 }
+    return { autosize: true, size: {} }
   }
   return {
-    width: parseInt(res[1], 10) + 'px',
-    height: parseInt(res[2] || res[1], 10) +  'px'
+    size: {
+      width: parseInt(res[1], 10) + 'px',
+      height: parseInt(res[2] || res[1], 10) +  'px'
+    }
   }
 }
 
@@ -78,8 +80,9 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = blockRE.blockquote.exec(src)) {
       src = src.substring(cap[0].length);
       rootType = 'blockquote';
+      var text = cap[0].replace(/^>\s+/, '').replace(/[\n\t]>\s+/g, '\n');
       var children$1 = [];
-      parseInlineMarkdown(cap[1], theme, children$1, theme.blockquote);
+      parseInlineMarkdown(text, theme, children$1, theme.blockquote);
       if (children$1.length) {
         container.push({
           type: 'span',
@@ -94,10 +97,11 @@ function parseInlineMarkdown (src, theme, container, textStyle) {
     if (cap = inlineRE.image.exec(src)) {
       src = src.substring(cap[0].length);
       rootType = 'image';
+      var res = parseImageSize(cap[1]);
       container.push({
         type: 'image',
-        style: Object.assign(parseImageSize(cap[1]), theme.image),
-        attr: { resize: "contain", title: cap[1], src: cap[2] }
+        style: Object.assign(res.size, theme.image),
+        attr: { resize: "contain", autosize: res.autosize, title: cap[1], src: cap[2] }
       });
       continue
     }
@@ -220,7 +224,7 @@ var getTextContent = function (children) { return children.map(
 var spliterRE = /[\n\t]{2,}/;
 function splitContent (content) {
   return content.split(spliterRE).map(
-    function (line) { return line.trim(/[\n\t]/); }
+    function (line) { return line; }//.trim(/[\n\t]/)
     // line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
   )
 }
@@ -276,6 +280,36 @@ function mapNodeToElement (nodes, h, inheritStyles) {
   })
 }
 
+var MarkdownImage = {
+  props: ['autosize', 'src'],
+  data: function data () {
+    return {
+      width: 750,
+      height: 200
+    }
+  },
+  render: function render (h) {
+    var this$1 = this;
+
+    if (this.autosize) {
+      return h('image', {
+        style: { width: this.width, height: this.height },
+        attrs: { src: this.src },
+        on: {
+          load: function (event) {
+            if (!event.success) { return; }
+            var ratio = event.size.naturalHeight / event.size.naturalWidth;
+            var width = Math.min(750, event.size.naturalWidth);
+            this$1.width = width + 'px';
+            this$1.height = width * ratio + 'px';
+          }
+        }
+      })
+    }
+    return h('image', { attrs: { src: this.src } })
+  }
+};
+
 var markdown = {
   name: 'markdown',
   props: {
@@ -304,10 +338,12 @@ var markdown = {
       var nodes = ref.nodes;
       var blockStyle = styles.block;
       switch (rootType) {
-        case 'image': return h('image', {
-          style: Object.assign({}, styles.imageBlock, nodes[0].style),
-          attrs: nodes[0].attr
-        })
+        case 'image': {
+          return h(MarkdownImage, {
+            style: Object.assign({}, styles.imageBlock, nodes[0].style),
+            attrs: nodes[0].attr
+          })
+        }
         case 'blockquote': blockStyle = styles.blockquoteBlock; break;
         case 'h1': case 'h2': case 'h3': case 'h4': case 'h5':
         case 'h6': blockStyle = styles[(rootType + "Block")]; break

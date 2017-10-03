@@ -21,10 +21,7 @@ const imageSizeRE = /\{(\d+)x(\d+)?\}/i
 function parseImageSize (str) {
   const res = imageSizeRE.exec(str)
   if (!res) {
-    return {
-      autosize: true,
-      size: { width: '650px', height: '10px' }
-    }
+    return { autosize: true, size: {} }
   }
   return {
     size: {

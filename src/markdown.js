@@ -61,17 +61,39 @@ function mapNodeToElement (nodes, h, inheritStyles = {}) {
   })
 }
 
-const imageSizeMap = {}
+const MarkdownImage = {
+  props: ['autosize', 'src'],
+  data () {
+    return {
+      width: 750,
+      height: 200
+    }
+  },
+  render (h) {
+    if (this.autosize) {
+      return h('image', {
+        style: { width: this.width, height: this.height },
+        attrs: { src: this.src },
+        on: {
+          load: event => {
+            if (!event.success) return;
+            const ratio = event.size.naturalHeight / event.size.naturalWidth
+            const width = Math.min(750, event.size.naturalWidth)
+            this.width = width + 'px'
+            this.height = width * ratio + 'px'
+          }
+        }
+      })
+    }
+    return h('image', { attrs: { src: this.src } })
+  }
+}
+
 export default {
   name: 'markdown',
   props: {
     content: String,
     theme: Object,
-  },
-  data () {
-    return {
-      imageIds: []
-    }
   },
   methods: {
     getStyles () {
@@ -92,30 +114,9 @@ export default {
       let blockStyle = styles.block
       switch (rootType) {
         case 'image': {
-          const $image = nodes[0]
-          const id = `[${$image.attr.autosize}] ${$image.attr.src}`
-          if ($image.attr.autosize && !imageSizeMap[id]) {
-            const __ = this.imageIds.length // emit dep collection
-            return h('image', {
-              style: Object.assign({}, styles.imageBlock, $image.style),
-              attrs: $image.attr,
-              on: {
-                load: event => {
-                  if (!event.success || imageSizeMap[id]) return;
-                  this.imageIds.push(id) // emit re-render
-                  const ratio = event.size.naturalHeight / event.size.naturalWidth
-                  const width = Math.min(750, event.size.naturalWidth)
-                  imageSizeMap[id] = {
-                    width: width + 'px',
-                    height: width * ratio + 'px'
-                  }
-                }
-              }
-            })
-          }
-          return h('image', {
-            style: Object.assign({}, styles.imageBlock, $image.style, imageSizeMap[id]),
-            attrs: $image.attr
+          return h(MarkdownImage, {
+            style: Object.assign({}, styles.imageBlock, nodes[0].style),
+            attrs: nodes[0].attr
           })
         }
         case 'blockquote': blockStyle = styles.blockquoteBlock; break;
