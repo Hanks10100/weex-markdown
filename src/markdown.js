@@ -7,7 +7,7 @@ const getTextContent = children => children.map(
 const spliterRE = /[\n\t]{2,}/
 function splitContent (content) {
   return content.split(spliterRE).map(
-    line => line.trim(/[\n\t]/)
+    line => line//.trim(/[\n\t]/)
     // line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
   )
 }
@@ -61,11 +61,17 @@ function mapNodeToElement (nodes, h, inheritStyles = {}) {
   })
 }
 
+const imageSizeMap = {}
 export default {
   name: 'markdown',
   props: {
     content: String,
     theme: Object,
+  },
+  data () {
+    return {
+      imageIds: []
+    }
   },
   methods: {
     getStyles () {
@@ -85,10 +91,33 @@ export default {
       const { rootType, nodes } = parseMarkdown(block, styles)
       let blockStyle = styles.block
       switch (rootType) {
-        case 'image': return h('image', {
-          style: Object.assign({}, styles.imageBlock, nodes[0].style),
-          attrs: nodes[0].attr
-        })
+        case 'image': {
+          const $image = nodes[0]
+          const id = `[${$image.attr.autosize}] ${$image.attr.src}`
+          if ($image.attr.autosize && !imageSizeMap[id]) {
+            const __ = this.imageIds.length // emit dep collection
+            return h('image', {
+              style: Object.assign({}, styles.imageBlock, $image.style),
+              attrs: $image.attr,
+              on: {
+                load: event => {
+                  if (!event.success || imageSizeMap[id]) return;
+                  this.imageIds.push(id) // emit re-render
+                  const ratio = event.size.naturalHeight / event.size.naturalWidth
+                  const width = Math.min(750, event.size.naturalWidth)
+                  imageSizeMap[id] = {
+                    width: width + 'px',
+                    height: width * ratio + 'px'
+                  }
+                }
+              }
+            })
+          }
+          return h('image', {
+            style: Object.assign({}, styles.imageBlock, $image.style, imageSizeMap[id]),
+            attrs: $image.attr
+          })
+        }
         case 'blockquote': blockStyle = styles.blockquoteBlock; break;
         case 'h1': case 'h2': case 'h3': case 'h4': case 'h5':
         case 'h6': blockStyle = styles[`${rootType}Block`]; break

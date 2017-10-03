@@ -1,6 +1,6 @@
 // Regex
 const blockRE = {
-  heading: /^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
+  heading: /^\n*(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)/,
   blockquote: /^ *>\s+([^\n]+)(\n(?!def)[^\n]+)*\n*/,
 }
 
@@ -21,11 +21,16 @@ const imageSizeRE = /\{(\d+)x(\d+)?\}/i
 function parseImageSize (str) {
   const res = imageSizeRE.exec(str)
   if (!res) {
-    return { width: 0, height: 0 }
+    return {
+      autosize: true,
+      size: { width: '650px', height: '10px' }
+    }
   }
   return {
-    width: parseInt(res[1], 10) + 'px',
-    height: parseInt(res[2] || res[1], 10) +  'px'
+    size: {
+      width: parseInt(res[1], 10) + 'px',
+      height: parseInt(res[2] || res[1], 10) +  'px'
+    }
   }
 }
 
@@ -88,10 +93,11 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle = {})
     if (cap = inlineRE.image.exec(src)) {
       src = src.substring(cap[0].length)
       rootType = 'image'
+      const res = parseImageSize(cap[1])
       container.push({
         type: 'image',
-        style: Object.assign(parseImageSize(cap[1]), theme.image),
-        attr: { resize: "contain", title: cap[1], src: cap[2] }
+        style: Object.assign(res.size, theme.image),
+        attr: { resize: "contain", autosize: res.autosize, title: cap[1], src: cap[2] }
       })
       continue
     }
