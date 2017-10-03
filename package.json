@@ -4,9 +4,9 @@
   "description": "Weex markdown component",
   "main": "index.js",
   "scripts": {
-    "build": "rollup -c rollup.config.js && rollup -c rollup.config.min.js ",
-    "build:example": "webpack",
-    "dev": "webpack --watch",
+    "build": "rollup -c ./build/rollup.config.js && rollup -c ./build/rollup.config.min.js ",
+    "build:example": "webpack --config ./build/webpack.config.js",
+    "dev": "webpack --watch --config ./build/webpack.config.js",
     "serve": "serve -p 2333",
     "prepublish": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -6,8 +6,8 @@ var bannerPlugin = new webpack.BannerPlugin({
   raw: true
 })
 
-var entry = { 'bundle': path.resolve('example', 'entry.js') }
-var outputPath = path.resolve(__dirname, './example/dist')
+var entry = { 'bundle': path.resolve(__dirname, '../example/entry.js') }
+var outputPath = path.resolve(__dirname, '../example/dist')
 
 var nativeConfig = {
   entry: entry,
