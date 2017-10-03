@@ -71,8 +71,9 @@ export function parseInlineMarkdown (src, theme, container = [], textStyle = {})
     if (cap = blockRE.blockquote.exec(src)) {
       src = src.substring(cap[0].length)
       rootType = 'blockquote'
+      const text = cap[0].replace(/^>\s+/, '').replace(/[\n\t]>\s+/g, '\n')
       const children = []
-      parseInlineMarkdown(cap[1], theme, children, theme.blockquote)
+      parseInlineMarkdown(text, theme, children, theme.blockquote)
       if (children.length) {
         container.push({
           type: 'span',
