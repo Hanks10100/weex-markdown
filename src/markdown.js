@@ -1,17 +1,5 @@
 import { parseMarkdown } from './parser'
 
-const getTextContent = children => children.map(
-  node => node.children ? getTextContent(node.children) : node.text
-).join('')
-
-const spliterRE = /[\n\t]{2,}/
-function splitContent (content) {
-  return content.split(spliterRE).map(
-    line => line//.trim(/[\n\t]/)
-    // line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
-  )
-}
-
 const defaultTheme = {
   a: { color: '#3333FF', textDecoration: 'none' },
   codespan: {
@@ -47,6 +35,18 @@ const defaultTheme = {
   block: { color: '#333', marginTop: '12px', marginBottom: '12px' }
 }
 
+const getTextContent = children => children.map(
+  node => node.children ? getTextContent(node.children) : node.text
+).join('')
+
+const spliterRE = /[\n\t]{2,}/
+function splitContent (content) {
+  return content.split(spliterRE).map(
+    line => line//.trim(/[\n\t]/)
+    // line => line.replace(/[\n\t]\s+/g, ' ').trim(/[\n\t]/)
+  )
+}
+
 function mapNodeToElement (nodes, h, inheritStyles = {}) {
   if (!Array.isArray(nodes)) {
     return null
@@ -59,6 +59,15 @@ function mapNodeToElement (nodes, h, inheritStyles = {}) {
       case 'a': return h('html:a', { style, attrs: { href: node.attr.href } }, children)
     }
   })
+}
+
+function mergeStyles (newStyle) {
+  if (!newStyle) return defaultTheme
+  const styles = {}
+  for (const type in defaultTheme) {
+    styles[type] = Object.assign({}, defaultTheme[type], newStyle[type])
+  }
+  return styles
 }
 
 const MarkdownImage = {
@@ -91,25 +100,15 @@ const MarkdownImage = {
 
 export default {
   name: 'markdown',
+  functional: true,
   props: {
     content: String,
     theme: Object,
   },
-  methods: {
-    getStyles () {
-      if (!this.theme) return defaultTheme
-      // merge default styles
-      const styles = {}
-      for (const type in defaultTheme) {
-        styles[type] = Object.assign({}, defaultTheme[type], this.theme[type])
-      }
-      return styles
-    }
-  },
-  render (h) {
-    const content = this.content || getTextContent(this.$slots.default)
-    const styles = this.getStyles()
-    return h('div', {}, splitContent(content).map(block => {
+  render (h, context) {
+    const content = context.props.content || getTextContent(context.children)
+    const styles = mergeStyles(context.props.theme)
+    return h('div', context.data, splitContent(content).map(block => {
       const { rootType, nodes } = parseMarkdown(block, styles)
       let blockStyle = styles.block
       switch (rootType) {
@@ -124,9 +123,9 @@ export default {
         case 'h6': blockStyle = styles[`${rootType}Block`]; break
       }
       if (typeof WXEnvironment === 'object' && WXEnvironment.platform === 'Web') {
-        return h('p', { style: blockStyle }, mapNodeToElement(nodes, h))
+        return h('html:p', { style: blockStyle }, mapNodeToElement(nodes, h))
       }
-      return h('richtext', { style: blockStyle, attrs: { value: nodes } })
+      return h('weex:richtext', { style: blockStyle, attrs: { value: nodes } })
     }))
   }
 }
